@@ -3,6 +3,7 @@ package org.cocos.instruments.infrastructure.dto.request;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -11,6 +12,7 @@ import lombok.Setter;
 public class InstrumentRequest {
 
     @NotBlank(message = "Search text is required.")
+    @Size(max = 100, message = "q must have at most 100 characters.")
     private String q;
 
     @Min(value = 0, message = "page must not be negative.")

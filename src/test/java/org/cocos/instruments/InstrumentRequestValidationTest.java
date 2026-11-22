@@ -88,6 +88,15 @@ class InstrumentRequestValidationTest {
     }
 
     @Test
+    void rejectsAQueryLongerThan100Characters() throws Exception {
+        mvc.perform(get("/api/v1/instruments").param("q", "a".repeat(101)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("q"))
+                .andExpect(jsonPath("$.errors[0].message").value("q must have at most 100 characters."));
+        verifyNoInteractions(service);
+    }
+
+    @Test
     void rejectsMissingQuery() throws Exception {
         mvc.perform(get("/api/v1/instruments"))
                 .andExpect(status().isBadRequest())

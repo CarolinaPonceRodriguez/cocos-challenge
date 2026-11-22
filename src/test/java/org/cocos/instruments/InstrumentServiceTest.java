@@ -16,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -36,7 +37,7 @@ class InstrumentServiceTest {
                 argThat((Pageable pageable) -> pageable instanceof PageRequest
                         && pageable.getPageNumber() == 1 && pageable.getPageSize() == 2
                         && pageable.getOffset() == 2
-                        && pageable.getSort().equals(Sort.by("ticker"))));
+                        && pageable.getSort().equals(Sort.by("ticker", "id"))));
     }
 
     @Test
@@ -48,9 +49,22 @@ class InstrumentServiceTest {
 
         var service = new InstrumentService(repository);
 
-        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.requireTradableStock(66))
+        assertThatThrownBy(() -> service.requireTradableStock(66))
                 .isInstanceOf(BusinessException.class)
                 .extracting(exception -> ((BusinessException) exception).getCode())
                 .isEqualTo(Code.INSTRUMENT_NOT_TRADABLE);
+    }
+
+    @Test
+    void rejectsAnUnknownInstrument() {
+        var repository = mock(InstrumentRepository.class);
+        when(repository.findById(9999)).thenReturn(Optional.empty());
+
+        var service = new InstrumentService(repository);
+
+        assertThatThrownBy(() -> service.requireTradableStock(9999))
+                .isInstanceOf(BusinessException.class)
+                .extracting(exception -> ((BusinessException) exception).getCode())
+                .isEqualTo(Code.INSTRUMENT_NOT_FOUND);
     }
 }

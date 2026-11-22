@@ -30,7 +30,7 @@ public class InstrumentService {
         var specification = InstrumentSpecifications.isStock()
                 .and(InstrumentSpecifications.matchesTickerOrName(request.getQ()));
         return repository.findAll(specification,
-                PageRequest.of(request.getPage(), request.getSize(), Sort.by("ticker")));
+                PageRequest.of(request.getPage(), request.getSize(), Sort.by("ticker", "id")));
     }
 
     @Transactional(readOnly = true)

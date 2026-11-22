@@ -37,7 +37,8 @@ class PortfolioServiceTest {
             quotes,
             users);
 
-    @Test void calculatesCashReservationsAndWeightedReturn() {
+    @Test
+    void calculatesCashReservationsAndWeightedReturn() {
         var movements = List.of(
                 movement(66, OrderSide.CASH_IN, OrderStatus.FILLED, 2000, "1"),
                 movement(1, OrderSide.BUY, OrderStatus.FILLED, 2, "100"),
@@ -66,7 +67,47 @@ class PortfolioServiceTest {
         });
     }
 
-    @Test void detectsHistoricalOversellingForAnyUserAndInstrument() {
+    @Test
+    void countsOnlySettledDepositsAndReservesPendingWithdrawals() {
+        var movements = List.of(
+                movement(66, OrderSide.CASH_IN, OrderStatus.FILLED, 1000, "1"),
+                movement(66, OrderSide.CASH_IN, OrderStatus.NEW, 500, "1"),
+                movement(66, OrderSide.CASH_OUT, OrderStatus.NEW, 200, "1"));
+        when(orders.findByUserIdAndStatusInOrderByDatetimeAscIdAsc(eq(3), any())).thenReturn(movements);
+
+        var result = service.get(3);
+
+        assertThat(result.availableCash()).isEqualByComparingTo("800");
+        assertThat(result.totalAccountValue()).isEqualByComparingTo("1000");
+    }
+
+    @Test
+    void roundsPercentagesHalfUpAndMoneyToTwoDecimals() {
+        var movements = List.of(
+                movement(66, OrderSide.CASH_IN, OrderStatus.FILLED, 800, "1"),
+                movement(1, OrderSide.BUY, OrderStatus.FILLED, 1, "800"));
+        when(orders.findByUserIdAndStatusInOrderByDatetimeAscIdAsc(eq(1), any())).thenReturn(movements);
+        var instrument = mock(Instrument.class);
+        when(instrument.getTicker()).thenReturn("TEST");
+        when(instruments.findForPortfolioValuation(any())).thenReturn(Map.of(1, instrument));
+        var quote = mock(MarketData.class);
+        when(quote.getClose()).thenReturn(new BigDecimal("801"));
+        when(quote.getPreviousClose()).thenReturn(new BigDecimal("800"));
+        when(quotes.findLatestForPortfolioValuation(any())).thenReturn(Map.of(1, quote));
+
+        var result = service.get(1);
+
+        assertThat(result.availableCash()).isEqualTo(new BigDecimal("0.00"));
+        assertThat(result.totalAccountValue()).isEqualTo(new BigDecimal("801.00"));
+        assertThat(result.positions()).singleElement().satisfies(position -> {
+            assertThat(position.marketValue()).isEqualTo(new BigDecimal("801.00"));
+            assertThat(position.totalReturnPercentage()).isEqualTo(new BigDecimal("0.13"));
+            assertThat(position.dailyReturnPercentage()).isEqualTo(new BigDecimal("0.13"));
+        });
+    }
+
+    @Test
+    void detectsHistoricalOversellingForAnyUserAndInstrument() {
         var movements = List.of(
                 movement(99, OrderSide.BUY, OrderStatus.FILLED, 2, "100"),
                 movement(99, OrderSide.SELL, OrderStatus.FILLED, 3, "120"));
@@ -76,7 +117,8 @@ class PortfolioServiceTest {
         assertThat(position.consistent()).isFalse();
     }
 
-    @Test void returnsANullTotalForAnInconsistentPosition() {
+    @Test
+    void returnsANullTotalForAnInconsistentPosition() {
         var movements = List.of(movement(99, OrderSide.BUY, OrderStatus.FILLED, 2, "100"),
                 movement(99, OrderSide.SELL, OrderStatus.FILLED, 3, "120"));
         when(orders.findByUserIdAndStatusInOrderByDatetimeAscIdAsc(eq(7), any())).thenReturn(movements);
@@ -99,7 +141,8 @@ class PortfolioServiceTest {
         });
     }
 
-    @Test void returnsANullDailyReturnWhenThePreviousPriceIsUnavailable() {
+    @Test
+    void returnsANullDailyReturnWhenThePreviousPriceIsUnavailable() {
         var movements = List.of(
                 movement(1, OrderSide.BUY, OrderStatus.FILLED, Integer.MAX_VALUE, "1"),
                 movement(1, OrderSide.BUY, OrderStatus.FILLED, 1, "1"));
@@ -124,7 +167,8 @@ class PortfolioServiceTest {
         });
     }
 
-    @Test void marksTheSnapshotAsIncompleteForAnIncompleteHistoricalTrade() {
+    @Test
+    void marksTheSnapshotAsIncompleteForAnIncompleteHistoricalTrade() {
         var movement = movement(1, OrderSide.BUY, OrderStatus.FILLED, 1, null);
         when(movement.getId()).thenReturn(7);
         when(orders.findByUserIdAndStatusInOrderByDatetimeAscIdAsc(eq(1), any())).thenReturn(List.of(movement));
@@ -135,7 +179,8 @@ class PortfolioServiceTest {
         assertThat(snapshot.positions()).isEmpty();
     }
 
-    @Test void sortsPositionsByTicker() {
+    @Test
+    void sortsPositionsByTicker() {
         var movements = List.of(
                 movement(2, OrderSide.BUY, OrderStatus.FILLED, 1, "10"),
                 movement(1, OrderSide.BUY, OrderStatus.FILLED, 1, "10"));

@@ -1,117 +1,73 @@
 # Cocos Challenge API
 
-REST API for instrument search, portfolios, and orders, built with Java 25, Spring Boot, Spring Data JPA, and PostgreSQL.
+REST API for instrument search, portfolios, and orders, built with Java 25, Spring Boot, Spring Data JPA, and PostgreSQL. Cocos requested Java for this challenge, so it uses Java instead of the Node.js stack named in the base brief.
 
-> **Stack:** Cocos requested Java for this challenge, so it uses Java and Spring Boot instead of the Node.js stack named in the base brief.
-
-The provided schema and data are used as they are and never modified by the application.
+The provided schema and data are used as they are.
 
 ## Requirements
 
-- JDK 25 with `JAVA_HOME` set. `./mvnw --version` must report Java 25. Maven is provided by the wrapper (`mvnw.cmd` on Windows).
-- Docker, for the local database, the container, and the functional tests.
-- Optional: the shared Neon database.
+- JDK 25 (`./mvnw --version` must report Java 25). Maven is provided by the wrapper (`mvnw.cmd` on Windows).
+- Docker, for the local database and the functional tests.
 
 Shell commands use bash/zsh syntax; on Windows use WSL or Git Bash.
 
-## Configuration
-
-**Local database.** The `local` profile connects to PostgreSQL on `localhost:5432`, with database, user, and password `cocos`. Start it with the provided schema, data, and indexes:
-
-```sh
-docker compose up -d db
-```
-
-On its first start the container loads `src/test/resources/data/database.sql` and then `indexes.sql`. `docker compose down` removes it, so the next start loads the data again from scratch.
-
-**Neon.** To run locally against the shared database, set `DB_JDBC_URL` (without credentials), `DB_USERNAME`, and `DB_PASSWORD` as environment variables; they take precedence over the local values. In IntelliJ, add them to the run configuration.
-
-**Docker.** The API container connects to Neon with the values in `.env`, which is ignored by Git:
-
-```sh
-cp .env.example .env
-```
-
-One `KEY=value` per line, without quotes. Optional: `HOST_PORT` for the port Docker publishes and `SERVER_PORT` for a local run (both default to 8080).
-
-Swagger UI and the API docs are enabled only with the `local` profile. `./mvnw spring-boot:run` activates it; in the IDE or with the JAR, set the active profile to `local`. Docker uses the production configuration.
-
 ## Run
 
-Locally:
+**Local database.** Start PostgreSQL with the provided schema, data, and indexes, then the API with the `local` profile:
 
 ```sh
+docker compose up -d --wait db
 ./mvnw spring-boot:run
 ```
 
-In IntelliJ, run `org.cocos.CocosChallengeApplication` with `local` as the active profile, or build the JAR with `./mvnw clean verify` and run `java -jar target/cocos-challenge-*.jar --spring.profiles.active=local`.
+The database, user, and password are `cocos`. On its first start the container loads `src/test/resources/data/database.sql` and `indexes.sql`; `docker compose --profile local-db down` removes it, so the next start loads the data again. If port 5432 is taken, set `DB_PORT` for both commands; for a port other than 8080, set `SERVER_PORT`.
 
-With Docker, against Neon (the local database is not started):
+In IntelliJ, run `org.cocos.CocosChallengeApplication` with `local` as the active profile.
+
+**Neon.** To run locally against the shared database, also set `DB_JDBC_URL` (without credentials), `DB_USERNAME`, and `DB_PASSWORD`; they take precedence over the local values.
+
+**Docker.** Docker runs the API only against Neon, with the credentials in `.env` (ignored by Git, one `KEY=value` per line, without quotes). Set `HOST_PORT` there to publish a port other than 8080.
 
 ```sh
+cp .env.example .env
 docker compose up --build
 ```
 
 ## Try it
 
+- **Swagger UI** (`local` profile only): <http://localhost:8080/swagger-ui.html>, with every endpoint, parameter, and error code.
+- **Postman:** import `postman/cocos-challenge.openapi.yaml`, with examples for each kind of order.
+- **Health:** `/actuator/health/liveness`, and `/actuator/health/readiness`, which also checks the database.
+
 ```sh
 curl 'http://localhost:8080/api/v1/instruments?q=macro'
 curl http://localhost:8080/api/v1/users/1/portfolio
-```
-
-Orders (these write to the configured database):
-
-```sh
-# MARKET buy by amount: buys as many whole shares as the amount covers, FILLED
 curl -X POST http://localhost:8080/api/v1/users/1/orders -H 'Content-Type: application/json' \
   -d '{"instrumentId":47,"side":"BUY","type":"MARKET","amount":10000}'
-
-# LIMIT sell: stays NEW and reserves the shares until cancelled
-curl -X POST http://localhost:8080/api/v1/users/1/orders -H 'Content-Type: application/json' \
-  -d '{"instrumentId":47,"side":"SELL","type":"LIMIT","quantity":5,"price":950}'
-
-# Selling more shares than held: saved as REJECTED, still 201
-curl -X POST http://localhost:8080/api/v1/users/1/orders -H 'Content-Type: application/json' \
-  -d '{"instrumentId":54,"side":"SELL","type":"MARKET","quantity":1000}'
-
-# Cancel a NEW order (use the id returned by the LIMIT order)
-curl -X POST http://localhost:8080/api/v1/users/1/orders/{orderId}/cancel
 ```
 
-- **Swagger UI** (local profile only): <http://localhost:8080/swagger-ui.html>.
-- **Postman:** import `postman/cocos-challenge.openapi.yaml`. It creates one request per endpoint with examples, including each kind of order.
-- **Health:** `/actuator/health/liveness` does not query the database; `/actuator/health/readiness` does, and wakes a suspended Neon.
-
-The endpoints, their parameters, and the error codes are documented in Swagger UI, which is generated from the code, and in the Postman file. Errors share one JSON envelope with a code and per-field details.
+Errors share one JSON envelope with a `code`, a message, and per-field details.
 
 ## Assumptions
 
-**Brief**
-
-- The base brief names Node.js; Cocos requested Java, so this uses Java and Spring Boot.
-- The brief's `size` is exposed as `quantity` in the API and stored in `orders.size`.
-- The brief lists `marketdata.datetime`; the provided SQL and the shared database have `marketdata.date`, which is what is read.
-- Tables and data are unchanged. Two optional indexes are proposed in `src/test/resources/data/indexes.sql` (see Decisions).
-
-**BMA inconsistency**
-
-- User 1 holds -10 shares of BMA (instrument 31): a filled purchase of 20 and a filled sale of 30. This is treated as an inconsistency in the provided history, not corrected.
-- The portfolio still returns 200 with the historical quantity, a null return for that position, and a null account total.
-- New buys and sells of that instrument by that user fail with 409 `INCONSISTENT_POSITION`. Cancelling existing `NEW` orders still works. The rule applies to any user and instrument with inconsistent history.
+- The brief's `size` is exposed as `quantity` and stored in `orders.size`. The brief lists `marketdata.datetime`; the provided data has `marketdata.date`, which is what is read.
+- Search matches part of the ticker or name, ignoring case, and returns only stocks. The portfolio adds `dailyReturnPercentage`, and `GET /api/v1/users/{userId}/orders/{orderId}` is an extra endpoint.
+- The API creates only `BUY` and `SELL` orders; `CASH_IN` and `CASH_OUT` are read from the history.
+- `MARKET` orders use the latest `close`, which in the provided data is from 2023, and ignore a submitted `price`. `LIMIT` orders stay `NEW` until cancelled.
+- With `amount`, the order trades as many whole shares as the amount covers. Prices and amounts allow two decimals.
+- A `NEW` `CASH_IN` adds no cash until it is `FILLED`; a `NEW` `CASH_OUT` reserves the cash.
+- User 1 holds -10 shares of BMA (a filled purchase of 20 and a filled sale of 30). This is treated as an inconsistency in the history, not corrected: the portfolio shows it with a null return and a null account total, and new orders for that instrument fail with 409 `INCONSISTENT_POSITION`. Cancelling still works, and the rule applies to any user and instrument.
 
 ## Decisions
 
-- Code is organized by feature (`instruments`, `marketdata`, `orders`, `portfolio`, `user`), each with domain, application, and infrastructure layers; controllers use explicit `Request` and `Response` DTOs.
-- Cash and positions are calculated from the user's `FILLED` and `NEW` orders, as the brief asks.
-- An order without enough cash or shares is saved as `REJECTED` and returns 201; `NEW` `LIMIT` orders reserve cash or shares until cancelled.
-- `availableCash` excludes the cash reserved by `NEW` buy orders; `totalAccountValue` includes it, since it still belongs to the user, and adds the market value of the positions.
-- Money uses `BigDecimal`; percentages are rounded `HALF_UP` to two decimals.
-- New orders are timestamped in Argentina time (`cocos.orders.time-zone`), inferred from the provided orders, which fall within BYMA market hours.
-- Search matches part of the ticker or name, ignoring case, and returns only stocks.
-- The portfolio adds `dailyReturnPercentage`, which the brief explains but does not list; `GET /api/v1/users/{userId}/orders/{orderId}` is an extra endpoint.
-- Creating or cancelling an order locks the user's row before reading the history, so two orders cannot spend the same cash or shares; if the lock wait expires, the API returns 409 `ACCOUNT_BUSY`.
-- `src/test/resources/data/indexes.sql` adds indexes on `orders (userId, status, datetime, id)` for reading a user's history and on `marketdata (instrumentId, date DESC, id DESC)` for the latest quote. The tests apply it; to apply it to the database, run `psql "postgresql://USER:PASSWORD@HOST/neondb?sslmode=require" -f src/test/resources/data/indexes.sql` with the values from `.env`.
-- `POST` orders is not idempotent: a retried request creates a new order. A future improvement is an `Idempotency-Key` header, which needs a new column outside the provided model.
+- Code is organized by feature (`instruments`, `marketdata`, `orders`, `portfolio`, `user`). Each one keeps its controllers, DTOs, and repositories in `infrastructure`, its services in `application`, and its entities in `domain`; services work with the API DTOs directly to keep the code small.
+- Cash and positions are recalculated from the user's `FILLED` orders on each request, as the brief asks, so there is no balance to keep in sync. `NEW` orders reserve cash or shares until cancelled.
+- An order without enough cash or shares is saved as `REJECTED` and returns 201, so the attempt stays in the history.
+- `availableCash` excludes reserved cash; `totalAccountValue` includes it, since it still belongs to the user. Money uses `BigDecimal` with two decimals; percentages are rounded `HALF_UP`.
+- Creating or cancelling an order locks the user's row first, so two concurrent orders cannot spend the same cash or shares. If the lock wait expires, the API returns 409 `ACCOUNT_BUSY`.
+- New orders are timestamped in Argentina time, inferred from the provided orders, which fall within market hours.
+- `indexes.sql` adds indexes for reading a user's history and the latest quote. The tests apply it; to apply it to Neon, run `psql "postgresql://USER:PASSWORD@HOST/neondb?sslmode=require" -f src/test/resources/data/indexes.sql`.
+- `POST` orders is not idempotent: a retried request creates a new order. An `Idempotency-Key` header would fix it, but needs a column outside the provided model.
 
 ## Tests
 
@@ -119,9 +75,7 @@ The endpoints, their parameters, and the error codes are documented in Swagger U
 ./mvnw verify
 ```
 
-Functional tests, including order submission and the portfolio of the provided data, run the full application against isolated PostgreSQL containers through Testcontainers. No test touches the shared database.
-
-They need Docker running: without it they are skipped and `verify` still passes, so check that the summary shows no skipped tests. The GitHub Actions workflow runs them on pushes to `main` and on pull requests.
+Functional tests run the full application against PostgreSQL containers through Testcontainers and never touch Neon. Without Docker they are skipped and `verify` still passes, so check that no tests are skipped. GitHub Actions runs them on pushes to `main` and on pull requests.
 
 ## Author
 

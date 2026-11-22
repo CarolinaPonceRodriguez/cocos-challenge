@@ -16,6 +16,8 @@ import org.springframework.stereotype.Component;
 @Component
 class PortfolioValuator {
 
+    private static final int MONEY_SCALE = 2;
+
     private static final Comparator<PositionResponse> BY_TICKER = Comparator
             .comparing(PositionResponse::ticker, Comparator.nullsLast(Comparator.naturalOrder()))
             .thenComparing(PositionResponse::instrumentId);
@@ -29,14 +31,14 @@ class PortfolioValuator {
                 .toList();
 
         return new PortfolioResponse(
-                snapshot.availableCash(),
+                money(snapshot.availableCash()),
                 totalAccountValue(snapshot, positions),
                 positions);
     }
 
     private BigDecimal totalAccountValue(AccountSnapshot snapshot, List<PositionResponse> positions) {
         return snapshot.isReliable() && positions.stream().allMatch(position -> position.marketValue() != null)
-                ? positions.stream().map(PositionResponse::marketValue).reduce(snapshot.cash(), BigDecimal::add)
+                ? positions.stream().map(PositionResponse::marketValue).reduce(money(snapshot.cash()), BigDecimal::add)
                 : null;
     }
 
@@ -55,7 +57,7 @@ class PortfolioValuator {
 
     private BigDecimal marketValue(PositionSnapshot position, Instrument instrument, BigDecimal close) {
         return close != null && instrument != null
-                ? close.multiply(BigDecimal.valueOf(position.quantity()))
+                ? money(close.multiply(BigDecimal.valueOf(position.quantity())))
                 : null;
     }
 
@@ -71,11 +73,15 @@ class PortfolioValuator {
 
     private BigDecimal percentageReturn(BigDecimal current, BigDecimal reference) {
         return current != null && isPositive(reference)
-                ? current.divide(reference, 16, RoundingMode.HALF_UP)
+                ? current.divide(reference, PositionSnapshot.DIVISION_SCALE, RoundingMode.HALF_UP)
                         .subtract(BigDecimal.ONE)
                         .multiply(BigDecimal.valueOf(100))
                         .setScale(2, RoundingMode.HALF_UP)
                 : null;
+    }
+
+    private BigDecimal money(BigDecimal value) {
+        return value.setScale(MONEY_SCALE, RoundingMode.HALF_UP);
     }
 
     private boolean isPositive(BigDecimal value) {

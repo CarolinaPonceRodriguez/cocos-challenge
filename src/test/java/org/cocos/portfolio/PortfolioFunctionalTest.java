@@ -1,5 +1,6 @@
 package org.cocos.portfolio;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import com.jayway.jsonpath.DocumentContext;
@@ -57,8 +58,10 @@ class PortfolioFunctionalTest {
     void returnsAnEmptyPortfolioForAUserWithoutHistory() throws Exception {
         var json = portfolio(2);
 
-        assertThat(json.read("$.availableCash", Integer.class)).isZero();
-        assertThat(json.read("$.totalAccountValue", Integer.class)).isZero();
+        assertThat(json.<Map<String, Object>>read("$"))
+                .containsOnlyKeys("availableCash", "totalAccountValue", "positions");
+        assertThat(json.read("$.availableCash", BigDecimal.class)).isEqualByComparingTo("0.00");
+        assertThat(json.read("$.totalAccountValue", BigDecimal.class)).isEqualByComparingTo("0.00");
         assertThat(json.<List<Object>>read("$.positions")).isEmpty();
     }
 

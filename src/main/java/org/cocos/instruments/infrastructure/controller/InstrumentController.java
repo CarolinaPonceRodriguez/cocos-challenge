@@ -1,6 +1,7 @@
 package org.cocos.instruments.infrastructure.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,8 @@ public class InstrumentController {
 
     @GetMapping
     @Operation(summary = "Search stocks by ticker or name")
+    @ApiResponse(responseCode = "200", description = "Matching stocks, sorted by ticker.")
+    @ApiResponse(responseCode = "400", description = "INVALID_REQUEST")
     public Page<InstrumentResponse> search(@ParameterObject @Valid @ModelAttribute InstrumentRequest request) {
         return InstrumentResponse.from(service.search(request));
     }

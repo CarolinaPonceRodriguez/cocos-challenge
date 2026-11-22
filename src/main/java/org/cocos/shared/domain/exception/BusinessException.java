@@ -6,6 +6,9 @@ import lombok.Getter;
 public class BusinessException extends RuntimeException {
     public enum Code {
         INVALID_REQUEST,
+        RESOURCE_NOT_FOUND,
+        METHOD_NOT_ALLOWED,
+        UNSUPPORTED_MEDIA_TYPE,
         ORDER_NOT_FOUND,
         USER_NOT_FOUND,
         INSTRUMENT_NOT_FOUND,

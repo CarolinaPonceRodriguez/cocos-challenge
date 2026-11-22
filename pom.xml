@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.1.2</version>
+        <version>4.2.0</version>
         <relativePath/>
     </parent>
 
@@ -19,8 +19,7 @@
 
     <properties>
         <java.version>25</java.version>
-        <springdoc-openapi.version>3.2.0</springdoc-openapi.version>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <springdoc-openapi.version>3.2.1</springdoc-openapi.version>
     </properties>
 
     <dependencies>
@@ -104,7 +103,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <parameters>true</parameters>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>

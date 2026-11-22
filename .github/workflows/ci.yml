@@ -16,3 +16,9 @@ jobs:
           java-version: '25'
           cache: maven
       - run: ./mvnw -B -ntp verify
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t cocos-challenge .

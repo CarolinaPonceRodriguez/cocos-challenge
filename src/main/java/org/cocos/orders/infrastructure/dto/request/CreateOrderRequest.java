@@ -23,18 +23,19 @@ public class CreateOrderRequest {
     @NotNull(message = "type is required.")
     private OrderType type;
 
-    @Positive
+    @Positive(message = "quantity must be greater than 0.")
     private Integer quantity;
 
-    @Positive
+    @Positive(message = "amount must be greater than 0.")
+    @Digits(integer = 12, fraction = 2, message = "amount must have at most 12 integer digits and 2 decimal places.")
     private BigDecimal amount;
 
-    @Positive
+    @Positive(message = "price must be greater than 0.")
     @Digits(integer = 8, fraction = 2, message = "price must have at most 8 integer digits and 2 decimal places.")
     private BigDecimal price;
 
     @AssertTrue(message = "Provide exactly one of quantity or amount.")
-    public boolean hasQuantity() {
+    public boolean hasQuantityOrAmount() {
         return (quantity == null) != (amount == null);
     }
 

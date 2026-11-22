@@ -3,6 +3,7 @@ package org.cocos.orders.domain.ledger;
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.cocos.orders.domain.entity.Order;
 
 final class AccountSnapshotState {
@@ -24,8 +25,8 @@ final class AccountSnapshotState {
     }
 
     AccountSnapshot toSnapshot() {
-        Map<Integer, PositionSnapshot> snapshots = new LinkedHashMap<>();
-        positions.forEach((instrumentId, position) -> snapshots.put(instrumentId, position.toSnapshot()));
+        Map<Integer, PositionSnapshot> snapshots = positions.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().toSnapshot()));
 
         return new AccountSnapshot(cash, reservedCash, snapshots, hasIncompleteHistory);
     }
@@ -45,10 +46,26 @@ final class AccountSnapshotState {
 
     private void record(Order order) {
         switch (order.getSide()) {
-            case CASH_IN -> cash = cash.add(BigDecimal.valueOf(order.getSize()));
-            case CASH_OUT -> cash = cash.subtract(BigDecimal.valueOf(order.getSize()));
+            case CASH_IN -> recordCashIn(order);
+            case CASH_OUT -> recordCashOut(order);
             case BUY -> recordBuy(order);
             case SELL -> recordSell(order);
+        }
+    }
+
+    private void recordCashIn(Order order) {
+        if (order.isSettled()) {
+            cash = cash.add(BigDecimal.valueOf(order.getSize()));
+        }
+    }
+
+    private void recordCashOut(Order order) {
+        BigDecimal amount = BigDecimal.valueOf(order.getSize());
+
+        if (order.isSettled()) {
+            cash = cash.subtract(amount);
+        } else {
+            reservedCash = reservedCash.add(amount);
         }
     }
 

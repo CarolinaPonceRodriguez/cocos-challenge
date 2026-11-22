@@ -5,8 +5,6 @@ import java.math.RoundingMode;
 
 final class PositionAccumulator {
 
-    private static final int AVERAGE_COST_SCALE = 16;
-
     private long quantity;
 
     private long reserved;
@@ -47,6 +45,6 @@ final class PositionAccumulator {
         BigDecimal heldCost = averageCost.multiply(BigDecimal.valueOf(quantity));
         BigDecimal quantityAfterBuying = BigDecimal.valueOf(quantity + size);
 
-        return heldCost.add(amount).divide(quantityAfterBuying, AVERAGE_COST_SCALE, RoundingMode.HALF_UP);
+        return heldCost.add(amount).divide(quantityAfterBuying, PositionSnapshot.DIVISION_SCALE, RoundingMode.HALF_UP);
     }
 }

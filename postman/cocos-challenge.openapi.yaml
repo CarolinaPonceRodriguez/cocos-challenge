@@ -20,7 +20,7 @@ paths:
           in: query
           required: true
           description: Text to look for in the ticker or name.
-          schema: { type: string, minLength: 1 }
+          schema: { type: string, minLength: 1, maxLength: 100 }
           example: macro
         - name: page
           in: query
@@ -57,15 +57,12 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Portfolio" }
               example:
-                availableCash: 626574.15
-                totalAccountValue: 700000.00
+                availableCash: 627500.00
+                totalAccountValue: null
                 positions:
-                  - instrumentId: 47
-                    ticker: PAMP
-                    quantity: 41
-                    marketValue: 38000.00
-                    totalReturnPercentage: 2.50
-                    dailyReturnPercentage: -0.40
+                  - { instrumentId: 31, ticker: BMA, quantity: -10, marketValue: -15028.00, totalReturnPercentage: null, dailyReturnPercentage: -1.15 }
+                  - { instrumentId: 54, ticker: METR, quantity: 500, marketValue: 114750.00, totalReturnPercentage: -8.20, dailyReturnPercentage: -1.08 }
+                  - { instrumentId: 47, ticker: PAMP, quantity: 40, marketValue: 37034.00, totalReturnPercentage: -0.45, dailyReturnPercentage: 0.44 }
         "400": { $ref: "#/components/responses/InvalidRequest" }
         "404": { $ref: "#/components/responses/NotFound" }
   /api/v1/users/{userId}/orders:
@@ -94,13 +91,23 @@ paths:
               marketSell:
                 summary: MARKET sell of 1 share
                 value: { instrumentId: 47, side: SELL, type: MARKET, quantity: 1 }
+              marketSellByAmount:
+                summary: MARKET sell for 2000 pesos
+                value: { instrumentId: 47, side: SELL, type: MARKET, amount: 2000.00 }
+              limitSell:
+                summary: LIMIT sell of 5 shares at 950
+                value: { instrumentId: 47, side: SELL, type: LIMIT, quantity: 5, price: 950.00 }
       responses:
         "201":
           description: The persisted order, whatever its final status.
+          headers:
+            Location:
+              description: URL of the created order.
+              schema: { type: string, example: /api/v1/users/1/orders/12 }
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Order" }
-              example: { id: 12, userId: 1, instrumentId: 47, side: BUY, type: MARKET, quantity: 1, price: 925.85, status: FILLED, datetime: "2026-11-20T18:38:17.063780" }
+              example: { id: 12, userId: 1, instrumentId: 47, side: BUY, type: MARKET, quantity: 1, price: 925.85, status: FILLED, datetime: "2026-11-22T14:57:24" }
         "400": { $ref: "#/components/responses/InvalidRequest" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
@@ -119,7 +126,7 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Order" }
-              example: { id: 5, userId: 1, instrumentId: 45, side: BUY, type: LIMIT, quantity: 50, price: 710.00, status: NEW, datetime: "2023-07-12T12:11:22" }
+              example: { id: 5, userId: 1, instrumentId: 45, side: BUY, type: LIMIT, quantity: 50, price: 710.00, status: NEW, datetime: "2023-07-12T15:14:20" }
         "400": { $ref: "#/components/responses/InvalidRequest" }
         "404": { $ref: "#/components/responses/NotFound" }
   /api/v1/users/{userId}/orders/{orderId}/cancel:
@@ -137,7 +144,7 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Order" }
-              example: { id: 5, userId: 1, instrumentId: 45, side: BUY, type: LIMIT, quantity: 50, price: 710.00, status: CANCELLED, datetime: "2023-07-12T12:11:22" }
+              example: { id: 5, userId: 1, instrumentId: 45, side: BUY, type: LIMIT, quantity: 50, price: 710.00, status: CANCELLED, datetime: "2023-07-12T15:14:20" }
         "400": { $ref: "#/components/responses/InvalidRequest" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
@@ -167,7 +174,7 @@ components:
             message: Request validation failed.
             errors: [{ field: q, message: Search text is required. }]
     NotFound:
-      description: USER_NOT_FOUND, ORDER_NOT_FOUND, or INSTRUMENT_NOT_FOUND.
+      description: USER_NOT_FOUND, ORDER_NOT_FOUND, INSTRUMENT_NOT_FOUND, or RESOURCE_NOT_FOUND.
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
@@ -196,7 +203,7 @@ components:
         side: { type: string, enum: [BUY, SELL], example: BUY }
         type: { type: string, enum: [MARKET, LIMIT], example: MARKET }
         quantity: { type: integer, minimum: 1, description: Whole shares. Send exactly one of quantity or amount., example: 1 }
-        amount: { type: number, description: Pesos to invest. Buys or sells as many whole shares as the amount covers., example: 5000.00 }
+        amount: { type: number, description: Pesos to trade. Buys or sells as many whole shares as the amount covers. At most two decimals., example: 5000.00 }
         price: { type: number, description: Required for LIMIT and ignored for MARKET. At most two decimals., example: 900.00 }
     Order:
       type: object

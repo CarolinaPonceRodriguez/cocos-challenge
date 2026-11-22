@@ -1,8 +1,8 @@
 package org.cocos.orders.domain.ledger;
 
 import java.math.BigDecimal;
-import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.cocos.orders.domain.entity.Order;
 
 public record AccountSnapshot(BigDecimal cash, BigDecimal reservedCash,
@@ -16,15 +16,9 @@ public record AccountSnapshot(BigDecimal cash, BigDecimal reservedCash,
     }
 
     public Map<Integer, PositionSnapshot> visiblePositions() {
-        Map<Integer, PositionSnapshot> visible = new LinkedHashMap<>();
-
-        positions.forEach((instrumentId, position) -> {
-            if (position.visible()) {
-                visible.put(instrumentId, position);
-            }
-        });
-
-        return visible;
+        return positions.entrySet().stream()
+                .filter(entry -> entry.getValue().visible())
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     public boolean isReliable() {

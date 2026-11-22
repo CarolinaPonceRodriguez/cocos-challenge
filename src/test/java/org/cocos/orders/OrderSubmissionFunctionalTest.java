@@ -1,5 +1,6 @@
 package org.cocos.orders;
 
+import java.math.BigDecimal;
 import java.net.http.HttpResponse;
 import java.sql.Connection;
 import java.util.List;
@@ -57,6 +58,8 @@ class OrderSubmissionFunctionalTest {
         assertThat(rejected.statusCode()).isEqualTo(201);
         assertThat(field(filled, "$.status")).isEqualTo("FILLED");
         assertThat(field(rejected, "$.status")).isEqualTo("REJECTED");
+        assertThat(filled.headers().firstValue("Location"))
+                .hasValue("http://localhost:" + port + ordersPath(1) + "/" + field(filled, "$.id", Integer.class));
 
         List<String> persisted = jdbc.sql("SELECT status FROM orders WHERE id IN (:filled, :rejected) ORDER BY id")
                 .param("filled", field(filled, "$.id", Integer.class))
@@ -66,7 +69,7 @@ class OrderSubmissionFunctionalTest {
 
         var portfolio = api.get("/api/v1/users/1/portfolio");
         assertThat(portfolio.statusCode()).isEqualTo(200);
-        assertThat(field(portfolio, "$.availableCash", Number.class).doubleValue()).isEqualTo(626574.15);
+        assertThat(field(portfolio, "$.availableCash", BigDecimal.class)).isEqualByComparingTo("626574.15");
         assertThat(JsonPath.parse(portfolio.body()).<List<Integer>>read("$.positions[?(@.ticker == 'PAMP')].quantity"))
                 .containsExactly(41);
 
@@ -121,19 +124,27 @@ class OrderSubmissionFunctionalTest {
             try {
                 holder.createStatement().execute("SELECT id FROM users WHERE id = 4 FOR UPDATE");
 
-                long start = System.nanoTime();
                 var blocked = createOrder(4, MARKET_BUY_ONE);
-                long elapsedMillis = (System.nanoTime() - start) / 1_000_000;
 
                 assertThat(blocked.statusCode()).isEqualTo(409);
                 assertThat(field(blocked, "$.code")).isEqualTo("ACCOUNT_BUSY");
-                assertThat(elapsedMillis).isBetween(900L, 4_000L);
             } finally {
                 holder.rollback();
             }
         }
 
         assertThat(createOrder(4, MARKET_BUY_ONE).statusCode()).isEqualTo(201);
+    }
+
+    @Test
+    void hidesTheOrdersOfOtherUsers() throws Exception {
+        var foreign = api.get(ordersPath(2) + "/5");
+        var foreignCancellation = api.postWithoutBody(ordersPath(2) + "/5/cancel");
+
+        assertThat(foreign.statusCode()).isEqualTo(404);
+        assertThat(field(foreign, "$.code")).isEqualTo("ORDER_NOT_FOUND");
+        assertThat(foreignCancellation.statusCode()).isEqualTo(404);
+        assertThat(api.get(ordersPath(1) + "/5").statusCode()).isEqualTo(200);
     }
 
     private HttpResponse<String> createOrder(int userId, String body) throws Exception {

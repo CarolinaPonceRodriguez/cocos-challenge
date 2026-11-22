@@ -60,9 +60,17 @@ class OrderExceptionHandlingTest {
     }
 
     @Test
-    void keepsStandardHandlingForFrameworkExceptionsWithTheirOwnStatus() throws Exception {
-        mvc.perform(post("/api/v1/unknown")).andExpect(status().isNotFound());
-        mvc.perform(put("/api/v1/users/1/orders")).andExpect(status().isMethodNotAllowed());
+    void reportsUnknownRoutesMethodsAndMediaTypesInTheErrorEnvelope() throws Exception {
+        mvc.perform(post("/api/v1/unknown")).andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
+        mvc.perform(put("/api/v1/users/1/orders")).andExpect(status().isMethodNotAllowed())
+                .andExpect(header().exists("Allow"))
+                .andExpect(jsonPath("$.code").value("METHOD_NOT_ALLOWED"));
+        mvc.perform(post("/api/v1/users/1/orders").contentType(MediaType.TEXT_PLAIN).content("order"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.code").value("UNSUPPORTED_MEDIA_TYPE"));
+
+        verifyNoInteractions(service);
     }
 
     @Test
@@ -110,10 +118,25 @@ class OrderExceptionHandlingTest {
         submit("{\"instrumentId\":47,\"side\":\"BUY\",\"type\":\"LIMIT\",\"quantity\":1,\"amount\":10}")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
-                .andExpect(jsonPath("$.errors[?(@.field == 'quantity')].message")
+                .andExpect(jsonPath("$.errors[?(@.field == 'quantityOrAmount')].message")
                         .value("Provide exactly one of quantity or amount."))
                 .andExpect(jsonPath("$.errors[?(@.field == 'price')].message")
                         .value("A LIMIT order requires a price."));
+
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void rejectsANonPositiveQuantityAndAnAmountWithMoreThanTwoDecimals() throws Exception {
+        submit("{\"instrumentId\":47,\"side\":\"BUY\",\"type\":\"MARKET\",\"quantity\":0}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("quantity"))
+                .andExpect(jsonPath("$.errors[0].message").value("quantity must be greater than 0."));
+        submit("{\"instrumentId\":47,\"side\":\"BUY\",\"type\":\"MARKET\",\"amount\":1000.123}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("amount"))
+                .andExpect(jsonPath("$.errors[0].message")
+                        .value("amount must have at most 12 integer digits and 2 decimal places."));
 
         verifyNoInteractions(service);
     }
