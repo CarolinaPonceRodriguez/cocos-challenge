@@ -14,13 +14,9 @@ public class UserService {
     private final UserRepository repository;
 
     public void ensureExists(Integer userId) {
-        if (isUnknown(userId)) {
+        if (!repository.existsById(userId)) {
             throw new UserNotFoundException(userId);
         }
-    }
-
-    private boolean isUnknown(Integer userId) {
-        return !repository.existsById(userId);
     }
 
     @Transactional(propagation = Propagation.MANDATORY)

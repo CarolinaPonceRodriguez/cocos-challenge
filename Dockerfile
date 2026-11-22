@@ -21,7 +21,7 @@ RUN useradd --system --create-home spring
 
 WORKDIR /app
 
-COPY --from=build /workspace/target/cocos-challenge-1.0-SNAPSHOT.jar app.jar
+COPY --from=build /workspace/target/*.jar app.jar
 
 USER spring
 

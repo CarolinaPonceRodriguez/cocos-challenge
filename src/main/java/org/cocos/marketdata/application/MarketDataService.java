@@ -23,11 +23,7 @@ public class MarketDataService {
     public Optional<BigDecimal> findLatestPositiveClose(Integer instrumentId) {
         return repository.findFirstByInstrumentIdAndDateIsNotNullOrderByDateDescIdDesc(instrumentId)
                 .map(MarketData::getClose)
-                .filter(this::isPositive);
-    }
-
-    private boolean isPositive(BigDecimal close) {
-        return close.signum() > 0;
+                .filter(close -> close.signum() > 0);
     }
 
     @Transactional(readOnly = true)

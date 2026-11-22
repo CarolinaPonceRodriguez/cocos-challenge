@@ -22,7 +22,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Tests HTTP, validation, services and JPA against a dedicated PostgreSQL container. */
 @Testcontainers(disabledWithoutDocker = true)
 @Import(PostgresTestConfiguration.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
