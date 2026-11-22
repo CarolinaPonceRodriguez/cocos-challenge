@@ -6,7 +6,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
 import lombok.RequiredArgsConstructor;
 import org.cocos.marketdata.domain.entity.MarketData;
 import org.cocos.marketdata.infrastructure.repository.MarketDataRepository;

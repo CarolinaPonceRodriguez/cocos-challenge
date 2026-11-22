@@ -1,7 +1,6 @@
 package org.cocos.instruments;
 
 import java.util.Optional;
-
 import org.cocos.instruments.application.InstrumentService;
 import org.cocos.instruments.domain.entity.Instrument;
 import org.cocos.instruments.domain.enums.InstrumentType;
@@ -26,8 +25,8 @@ class InstrumentServiceTest {
 
     @Test
     void searchesTheRequestedPageSortedByTicker() {
-        var repository = mock(InstrumentRepository.class);
-        var request = new InstrumentRequest();
+        InstrumentRepository repository = mock(InstrumentRepository.class);
+        InstrumentRequest request = new InstrumentRequest();
         request.setQ("macro");
         request.setPage(1);
         request.setSize(2);
@@ -42,14 +41,14 @@ class InstrumentServiceTest {
 
     @Test
     void rejectsAnInstrumentThatIsNotAStock() {
-        var repository = mock(InstrumentRepository.class);
-        var instrument = mock(Instrument.class);
+        InstrumentRepository repository = mock(InstrumentRepository.class);
+        Instrument instrument = mock(Instrument.class);
         when(instrument.getType()).thenReturn(InstrumentType.MONEDA);
         when(repository.findById(66)).thenReturn(Optional.of(instrument));
 
-        var service = new InstrumentService(repository);
+        InstrumentService service = new InstrumentService(repository);
 
-        assertThatThrownBy(() -> service.requireTradableStock(66))
+        assertThatThrownBy(() -> service.ensureTradableStock(66))
                 .isInstanceOf(BusinessException.class)
                 .extracting(exception -> ((BusinessException) exception).getCode())
                 .isEqualTo(Code.INSTRUMENT_NOT_TRADABLE);
@@ -57,12 +56,12 @@ class InstrumentServiceTest {
 
     @Test
     void rejectsAnUnknownInstrument() {
-        var repository = mock(InstrumentRepository.class);
+        InstrumentRepository repository = mock(InstrumentRepository.class);
         when(repository.findById(9999)).thenReturn(Optional.empty());
 
-        var service = new InstrumentService(repository);
+        InstrumentService service = new InstrumentService(repository);
 
-        assertThatThrownBy(() -> service.requireTradableStock(9999))
+        assertThatThrownBy(() -> service.ensureTradableStock(9999))
                 .isInstanceOf(BusinessException.class)
                 .extracting(exception -> ((BusinessException) exception).getCode())
                 .isEqualTo(Code.INSTRUMENT_NOT_FOUND);

@@ -10,7 +10,12 @@ import org.cocos.orders.application.OrderService;
 import org.cocos.orders.infrastructure.dto.request.CreateOrderRequest;
 import org.cocos.orders.infrastructure.dto.response.OrderResponse;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @RestController
@@ -23,7 +28,8 @@ public class OrderController {
 
     @PostMapping
     @Operation(summary = "Submit a buy or sell order",
-            description = "Send exactly one of `quantity` or `amount`. Insufficient resources persist a REJECTED order.")
+            description = "Send exactly one of `quantity` or `amount`. "
+                    + "Insufficient resources persist a REJECTED order.")
     @ApiResponse(responseCode = "201", description = "Order created.",
             headers = @Header(name = "Location", description = "URL of the created order."))
     @ApiResponse(responseCode = "400", description = "INVALID_REQUEST")

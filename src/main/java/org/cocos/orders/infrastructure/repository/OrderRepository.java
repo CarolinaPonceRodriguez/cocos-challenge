@@ -2,7 +2,6 @@ package org.cocos.orders.infrastructure.repository;
 
 import java.util.List;
 import java.util.Optional;
-
 import org.cocos.orders.domain.entity.Order;
 import org.cocos.orders.domain.enums.OrderStatus;
 import org.springframework.data.repository.Repository;

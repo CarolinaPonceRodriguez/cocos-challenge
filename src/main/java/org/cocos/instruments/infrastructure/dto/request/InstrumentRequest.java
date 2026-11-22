@@ -11,12 +11,12 @@ import lombok.Setter;
 @Setter
 public class InstrumentRequest {
 
-    @NotBlank(message = "Search text is required.")
+    @NotBlank(message = "q is required.")
     @Size(max = 100, message = "q must have at most 100 characters.")
     private String q;
 
     @Min(value = 0, message = "page must not be negative.")
-    private int page = 0;
+    private int page;
 
     @Min(value = 1, message = "size must be at least 1.")
     @Max(value = 100, message = "size must not exceed 100.")

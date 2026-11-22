@@ -1,10 +1,7 @@
 package org.cocos.shared.infrastructure.exception;
 
 import java.util.List;
-
 import lombok.extern.slf4j.Slf4j;
-import tools.jackson.databind.exc.MismatchedInputException;
-
 import org.cocos.shared.domain.exception.BusinessException;
 import org.cocos.shared.domain.exception.BusinessException.Code;
 import org.cocos.shared.infrastructure.dto.response.ApiErrorResponse;
@@ -22,6 +19,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import tools.jackson.databind.exc.MismatchedInputException;
 
 @Slf4j
 @RestControllerAdvice

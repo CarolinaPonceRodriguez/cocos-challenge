@@ -4,7 +4,6 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
 import lombok.RequiredArgsConstructor;
 import org.cocos.instruments.domain.entity.Instrument;
 import org.cocos.instruments.domain.enums.InstrumentType;
@@ -16,6 +15,7 @@ import org.cocos.shared.domain.exception.BusinessException.Code;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,15 +27,15 @@ public class InstrumentService {
 
     @Transactional(readOnly = true)
     public Page<Instrument> search(InstrumentRequest request) {
-        var specification = InstrumentSpecifications.isStock()
+        Specification<Instrument> specification = InstrumentSpecifications.isStock()
                 .and(InstrumentSpecifications.matchesTickerOrName(request.getQ()));
         return repository.findAll(specification,
                 PageRequest.of(request.getPage(), request.getSize(), Sort.by("ticker", "id")));
     }
 
     @Transactional(readOnly = true)
-    public void requireTradableStock(Integer instrumentId) {
-        var instrument = repository.findById(instrumentId)
+    public void ensureTradableStock(Integer instrumentId) {
+        Instrument instrument = repository.findById(instrumentId)
                 .orElseThrow(() -> new BusinessException(Code.INSTRUMENT_NOT_FOUND,
                         "Instrument %d was not found.".formatted(instrumentId)));
 

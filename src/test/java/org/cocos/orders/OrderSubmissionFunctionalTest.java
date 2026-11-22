@@ -15,8 +15,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -50,8 +50,8 @@ class OrderSubmissionFunctionalTest {
 
     @Test
     void persistsFilledAndRejectedOrdersAndUpdatesPortfolio() throws Exception {
-        var filled = createOrder(1, MARKET_BUY_ONE);
-        var rejected = createOrder(1, """
+        HttpResponse<String> filled = createOrder(1, MARKET_BUY_ONE);
+        HttpResponse<String> rejected = createOrder(1, """
                 {"instrumentId":47,"side":"SELL","type":"MARKET","quantity":999}""");
 
         assertThat(filled.statusCode()).isEqualTo(201);
@@ -67,13 +67,13 @@ class OrderSubmissionFunctionalTest {
                 .query(String.class).list();
         assertThat(persisted).containsExactly("FILLED", "REJECTED");
 
-        var portfolio = api.get("/api/v1/users/1/portfolio");
+        HttpResponse<String> portfolio = api.get("/api/v1/users/1/portfolio");
         assertThat(portfolio.statusCode()).isEqualTo(200);
         assertThat(field(portfolio, "$.availableCash", BigDecimal.class)).isEqualByComparingTo("626574.15");
         assertThat(JsonPath.parse(portfolio.body()).<List<Integer>>read("$.positions[?(@.ticker == 'PAMP')].quantity"))
                 .containsExactly(41);
 
-        var stored = api.get(ordersPath(1) + "/" + field(filled, "$.id", Integer.class));
+        HttpResponse<String> stored = api.get(ordersPath(1) + "/" + field(filled, "$.id", Integer.class));
         assertThat(stored.statusCode()).isEqualTo(200);
         assertThat(field(stored, "$.status")).isEqualTo("FILLED");
     }
@@ -84,9 +84,9 @@ class OrderSubmissionFunctionalTest {
 
         String body = """
                 {"instrumentId":47,"side":"BUY","type":"MARKET","quantity":300}""";
-        var first = api.postAsync(ordersPath(2), body);
-        var second = api.postAsync(ordersPath(2), body);
-        var responses = CompletableFuture.allOf(first, second)
+        CompletableFuture<HttpResponse<String>> first = api.postAsync(ordersPath(2), body);
+        CompletableFuture<HttpResponse<String>> second = api.postAsync(ordersPath(2), body);
+        List<HttpResponse<String>> responses = CompletableFuture.allOf(first, second)
                 .thenApply(ignored -> List.of(first.join(), second.join()))
                 .join();
 
@@ -101,16 +101,17 @@ class OrderSubmissionFunctionalTest {
     void cancellationReleasesTheReservationForANewOrder() throws Exception {
         insertCashIn(3, 10_000);
 
-        var pending = createOrder(3, """
+        HttpResponse<String> pending = createOrder(3, """
                 {"instrumentId":47,"side":"BUY","type":"LIMIT","quantity":50,"price":100}""");
         assertThat(pending.statusCode()).isEqualTo(201);
         assertThat(field(pending, "$.status")).isEqualTo("NEW");
 
-        var cancellation = api.postWithoutBody(ordersPath(3) + "/" + field(pending, "$.id", Integer.class) + "/cancel");
+        HttpResponse<String> cancellation =
+                api.postWithoutBody(ordersPath(3) + "/" + field(pending, "$.id", Integer.class) + "/cancel");
         assertThat(cancellation.statusCode()).isEqualTo(200);
         assertThat(field(cancellation, "$.status")).isEqualTo("CANCELLED");
 
-        var market = createOrder(3, """
+        HttpResponse<String> market = createOrder(3, """
                 {"instrumentId":47,"side":"BUY","type":"MARKET","quantity":10}""");
         assertThat(market.statusCode()).isEqualTo(201);
         assertThat(field(market, "$.status")).isEqualTo("FILLED");
@@ -124,7 +125,7 @@ class OrderSubmissionFunctionalTest {
             try {
                 holder.createStatement().execute("SELECT id FROM users WHERE id = 4 FOR UPDATE");
 
-                var blocked = createOrder(4, MARKET_BUY_ONE);
+                HttpResponse<String> blocked = createOrder(4, MARKET_BUY_ONE);
 
                 assertThat(blocked.statusCode()).isEqualTo(409);
                 assertThat(field(blocked, "$.code")).isEqualTo("ACCOUNT_BUSY");
@@ -138,8 +139,8 @@ class OrderSubmissionFunctionalTest {
 
     @Test
     void hidesTheOrdersOfOtherUsers() throws Exception {
-        var foreign = api.get(ordersPath(2) + "/5");
-        var foreignCancellation = api.postWithoutBody(ordersPath(2) + "/5/cancel");
+        HttpResponse<String> foreign = api.get(ordersPath(2) + "/5");
+        HttpResponse<String> foreignCancellation = api.postWithoutBody(ordersPath(2) + "/5/cancel");
 
         assertThat(foreign.statusCode()).isEqualTo(404);
         assertThat(field(foreign, "$.code")).isEqualTo("ORDER_NOT_FOUND");

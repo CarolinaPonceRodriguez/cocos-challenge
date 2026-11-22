@@ -1,7 +1,6 @@
 package org.cocos.instruments.infrastructure.repository;
 
 import java.util.Locale;
-
 import org.cocos.instruments.domain.entity.Instrument;
 import org.cocos.instruments.domain.enums.InstrumentType;
 import org.springframework.data.jpa.domain.Specification;

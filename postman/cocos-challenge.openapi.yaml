@@ -172,7 +172,7 @@ components:
           example:
             code: INVALID_REQUEST
             message: Request validation failed.
-            errors: [{ field: q, message: Search text is required. }]
+            errors: [{ field: q, message: q is required. }]
     NotFound:
       description: USER_NOT_FOUND, ORDER_NOT_FOUND, INSTRUMENT_NOT_FOUND, or RESOURCE_NOT_FOUND.
       content:

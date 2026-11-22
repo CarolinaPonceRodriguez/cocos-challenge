@@ -1,6 +1,7 @@
 package org.cocos.portfolio;
 
 import java.math.BigDecimal;
+import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Map;
 import com.jayway.jsonpath.DocumentContext;
@@ -33,7 +34,7 @@ class PortfolioFunctionalTest {
 
     @Test
     void valuesTheProvidedHistoryOfUserOne() throws Exception {
-        var json = portfolio(1);
+        DocumentContext json = portfolio(1);
 
         assertThat(json.<Map<String, Object>>read("$"))
                 .containsOnlyKeys("availableCash", "totalAccountValue", "positions");
@@ -56,7 +57,7 @@ class PortfolioFunctionalTest {
 
     @Test
     void returnsAnEmptyPortfolioForAUserWithoutHistory() throws Exception {
-        var json = portfolio(2);
+        DocumentContext json = portfolio(2);
 
         assertThat(json.<Map<String, Object>>read("$"))
                 .containsOnlyKeys("availableCash", "totalAccountValue", "positions");
@@ -66,7 +67,7 @@ class PortfolioFunctionalTest {
     }
 
     private DocumentContext portfolio(int userId) throws Exception {
-        var response = api.get("/api/v1/users/" + userId + "/portfolio");
+        HttpResponse<String> response = api.get("/api/v1/users/" + userId + "/portfolio");
         assertThat(response.statusCode()).isEqualTo(200);
         return JsonPath.parse(response.body());
     }

@@ -9,7 +9,7 @@ public record AccountSnapshot(BigDecimal cash, BigDecimal reservedCash,
                               Map<Integer, PositionSnapshot> positions, boolean hasIncompleteHistory) {
 
     public static AccountSnapshot replay(Iterable<Order> movements) {
-        var state = new AccountSnapshotState();
+        AccountSnapshotState state = new AccountSnapshotState();
         movements.forEach(state::apply);
 
         return state.toSnapshot();

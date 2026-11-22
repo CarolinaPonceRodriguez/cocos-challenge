@@ -6,7 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
-
+import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import org.cocos.ApiClient;
 import org.cocos.PostgresTestConfiguration;
@@ -16,8 +16,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Import;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -55,9 +55,9 @@ class InstrumentSearchFunctionalTest {
     @ParameterizedTest
     @MethodSource("searches")
     void searchesLiteralTickerOrName(String query, List<Integer> expectedIds) throws Exception {
-        var response = get("?q=" + encode(query));
+        HttpResponse<String> response = get("?q=" + encode(query));
         assertThat(response.statusCode()).isEqualTo(200);
-        var json = JsonPath.parse(response.body());
+        DocumentContext json = JsonPath.parse(response.body());
         List<Integer> ids = json.read("$.content[*].id");
         assertThat(ids).containsExactlyElementsOf(expectedIds);
         assertThat(json.read("$.page.size", Integer.class)).isEqualTo(20);
@@ -71,9 +71,9 @@ class InstrumentSearchFunctionalTest {
 
     @Test
     void returnsTheRequestedPageAndTotalCount() throws Exception {
-        var response = get("?q=banco&size=2&page=1");
+        HttpResponse<String> response = get("?q=banco&size=2&page=1");
         assertThat(response.statusCode()).isEqualTo(200);
-        var json = JsonPath.parse(response.body());
+        DocumentContext json = JsonPath.parse(response.body());
         List<Integer> ids = json.read("$.content[*].id");
         assertThat(ids).containsExactly(31, 19);
         assertThat(json.read("$.page.size", Integer.class)).isEqualTo(2);
@@ -86,7 +86,7 @@ class InstrumentSearchFunctionalTest {
 
     @Test
     void returnsEmptyPageBeyondTheResults() throws Exception {
-        var response = get("?q=banco&size=2&page=100");
+        HttpResponse<String> response = get("?q=banco&size=2&page=100");
         assertThat(response.statusCode()).isEqualTo(200);
         List<?> items = JsonPath.parse(response.body()).read("$.content");
         assertThat(items).isEmpty();

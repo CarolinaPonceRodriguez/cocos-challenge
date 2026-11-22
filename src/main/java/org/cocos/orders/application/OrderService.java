@@ -9,12 +9,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.cocos.instruments.application.InstrumentService;
 import org.cocos.marketdata.application.MarketDataService;
-import org.cocos.orders.domain.ledger.AccountSnapshot;
 import org.cocos.orders.domain.entity.Order;
 import org.cocos.orders.domain.enums.OrderStatus;
 import org.cocos.orders.domain.enums.OrderType;
 import org.cocos.orders.domain.enums.TradeSide;
 import org.cocos.orders.domain.exception.OrderNotFoundException;
+import org.cocos.orders.domain.ledger.AccountSnapshot;
 import org.cocos.orders.infrastructure.dto.request.CreateOrderRequest;
 import org.cocos.orders.infrastructure.repository.OrderRepository;
 import org.cocos.shared.domain.exception.BusinessException;
@@ -51,19 +51,19 @@ public class OrderService {
 
     @Transactional
     public Order create(Integer userId, CreateOrderRequest request) {
-        instruments.requireTradableStock(request.getInstrumentId());
+        instruments.ensureTradableStock(request.getInstrumentId());
         Optional<BigDecimal> latestMarketClose = findLatestMarketClose(request);
 
         users.lockForOrderChanges(userId);
 
-        var snapshot = accountSnapshots.snapshot(userId);
+        AccountSnapshot snapshot = accountSnapshots.snapshot(userId);
         ensurePositionIsConsistent(userId, request, snapshot);
 
         BigDecimal price = resolvePrice(request, latestMarketClose);
         int quantity = resolveQuantity(request, price);
-        var status = resolveStatus(request, price, quantity, snapshot);
+        OrderStatus status = resolveStatus(request, price, quantity, snapshot);
 
-        var order = orders.save(new Order(
+        Order order = orders.save(new Order(
                 userId,
                 request.getInstrumentId(),
                 quantity,
@@ -147,7 +147,7 @@ public class OrderService {
     public Order cancel(Integer userId, Integer orderId) {
         users.lockForOrderChanges(userId);
 
-        var order = findOrder(userId, orderId);
+        Order order = findOrder(userId, orderId);
 
         ensureCancellable(order);
         order.markCancelled();

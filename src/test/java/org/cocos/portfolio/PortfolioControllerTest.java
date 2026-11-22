@@ -3,9 +3,9 @@ package org.cocos.portfolio;
 import java.math.BigDecimal;
 import java.util.List;
 import org.cocos.portfolio.application.PortfolioService;
-import org.cocos.portfolio.infrastructure.dto.response.PortfolioResponse.PositionResponse;
-import org.cocos.portfolio.infrastructure.dto.response.PortfolioResponse;
 import org.cocos.portfolio.infrastructure.controller.PortfolioController;
+import org.cocos.portfolio.infrastructure.dto.response.PortfolioResponse;
+import org.cocos.portfolio.infrastructure.dto.response.PortfolioResponse.PositionResponse;
 import org.cocos.user.domain.exception.UserNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +31,7 @@ class PortfolioControllerTest {
 
     @Test
     void returnsTheCompletePortfolioAsExplicitJson() throws Exception {
-        var position = new PositionResponse(47, "PAMP", 41L, new BigDecimal("38000.00"),
+        PositionResponse position = new PositionResponse(47, "PAMP", 41L, new BigDecimal("38000.00"),
                 new BigDecimal("2.50"), new BigDecimal("-0.40"));
         when(service.get(1)).thenReturn(new PortfolioResponse(new BigDecimal("626574.15"),
                 new BigDecimal("700000.00"), List.of(position)));
@@ -51,7 +51,7 @@ class PortfolioControllerTest {
 
     @Test
     void returnsNullValuesWhenThePortfolioCannotBeValued() throws Exception {
-        var position = new PositionResponse(31, "BMA", -10L, null, null, new BigDecimal("1.00"));
+        PositionResponse position = new PositionResponse(31, "BMA", -10L, null, null, new BigDecimal("1.00"));
         when(service.get(1)).thenReturn(new PortfolioResponse(new BigDecimal("100.00"),
                 null, List.of(position)));
 

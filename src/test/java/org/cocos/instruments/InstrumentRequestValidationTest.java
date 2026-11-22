@@ -1,26 +1,31 @@
 package org.cocos.instruments;
 
 import java.util.List;
-
 import org.cocos.instruments.application.InstrumentService;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.cocos.instruments.domain.entity.Instrument;
 import org.cocos.instruments.domain.enums.InstrumentType;
 import org.cocos.instruments.infrastructure.controller.InstrumentController;
 import org.cocos.instruments.infrastructure.dto.request.InstrumentRequest;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(InstrumentController.class)
 class InstrumentRequestValidationTest {
@@ -33,7 +38,7 @@ class InstrumentRequestValidationTest {
 
     @Test
     void appliesDefaultsBeforeCallingTheService() throws Exception {
-        var instrument = mock(Instrument.class);
+        Instrument instrument = mock(Instrument.class);
         when(instrument.getId()).thenReturn(31);
         when(instrument.getTicker()).thenReturn("BMA");
         when(instrument.getName()).thenReturn("Banco Macro S.A.");
@@ -102,7 +107,7 @@ class InstrumentRequestValidationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.message").value("Request validation failed."))
-                .andExpect(jsonPath("$.errors[0].message").value("Search text is required."));
+                .andExpect(jsonPath("$.errors[0].message").value("q is required."));
         verifyNoInteractions(service);
     }
 

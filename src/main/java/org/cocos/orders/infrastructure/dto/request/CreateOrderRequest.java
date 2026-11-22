@@ -7,8 +7,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 import lombok.Setter;
-import org.cocos.orders.domain.enums.TradeSide;
 import org.cocos.orders.domain.enums.OrderType;
+import org.cocos.orders.domain.enums.TradeSide;
 
 @Getter
 @Setter

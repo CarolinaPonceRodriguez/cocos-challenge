@@ -1,7 +1,6 @@
 package org.cocos.user.infrastructure.repository;
 
 import java.util.Optional;
-
 import jakarta.persistence.LockModeType;
 import org.cocos.user.domain.entity.User;
 import org.springframework.data.jpa.repository.Lock;

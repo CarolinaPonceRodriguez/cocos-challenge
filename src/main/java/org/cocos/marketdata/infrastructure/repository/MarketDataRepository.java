@@ -3,7 +3,6 @@ package org.cocos.marketdata.infrastructure.repository;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-
 import org.cocos.marketdata.domain.entity.MarketData;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
