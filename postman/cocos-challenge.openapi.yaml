@@ -1,0 +1,262 @@
+openapi: 3.0.3
+info:
+  title: Cocos Challenge API
+  version: v1
+  description: Instrument search, portfolios, and orders. Import this file in Postman to get a ready-to-send collection.
+servers:
+  - url: http://localhost:8080
+tags:
+  - name: Instruments
+  - name: Portfolio
+  - name: Orders
+paths:
+  /api/v1/instruments:
+    get:
+      tags: [Instruments]
+      summary: Search stocks by ticker or name
+      operationId: searchInstruments
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Text to look for in the ticker or name.
+          schema: { type: string, minLength: 1 }
+          example: macro
+        - name: page
+          in: query
+          description: Zero-based page index.
+          schema: { type: integer, minimum: 0, default: 0 }
+          example: 0
+        - name: size
+          in: query
+          description: Items per page, 1 to 100.
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+          example: 20
+      responses:
+        "200":
+          description: A page of matching stocks, possibly empty.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InstrumentPage" }
+              example:
+                content:
+                  - { id: 31, ticker: BMA, name: Banco Macro S.A., type: ACCIONES }
+                page: { size: 20, number: 0, totalElements: 1, totalPages: 1 }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+  /api/v1/users/{userId}/portfolio:
+    get:
+      tags: [Portfolio]
+      summary: Get the portfolio of a user
+      operationId: getPortfolio
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: The portfolio. totalAccountValue is null when it cannot be fully valued.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Portfolio" }
+              example:
+                availableCash: 626574.15
+                totalAccountValue: 700000.00
+                positions:
+                  - instrumentId: 47
+                    ticker: PAMP
+                    quantity: 41
+                    marketValue: 38000.00
+                    totalReturnPercentage: 2.50
+                    dailyReturnPercentage: -0.40
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/v1/users/{userId}/orders:
+    post:
+      tags: [Orders]
+      summary: Submit a buy or sell order
+      description: Send exactly one of quantity or amount. A LIMIT order requires price; a MARKET order ignores it. An order without enough cash or shares is persisted as REJECTED and still returns 201.
+      operationId: createOrder
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateOrderRequest" }
+            examples:
+              marketBuyByQuantity:
+                summary: MARKET buy of 1 share
+                value: { instrumentId: 47, side: BUY, type: MARKET, quantity: 1 }
+              marketBuyByAmount:
+                summary: MARKET buy for 5000 pesos
+                value: { instrumentId: 47, side: BUY, type: MARKET, amount: 5000.00 }
+              limitBuy:
+                summary: LIMIT buy of 10 shares at 900
+                value: { instrumentId: 47, side: BUY, type: LIMIT, quantity: 10, price: 900.00 }
+              marketSell:
+                summary: MARKET sell of 1 share
+                value: { instrumentId: 47, side: SELL, type: MARKET, quantity: 1 }
+      responses:
+        "201":
+          description: The persisted order, whatever its final status.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Order" }
+              example: { id: 12, userId: 1, instrumentId: 47, side: BUY, type: MARKET, quantity: 1, price: 925.85, status: FILLED, datetime: "2026-11-20T18:38:17.063780" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/v1/users/{userId}/orders/{orderId}:
+    get:
+      tags: [Orders]
+      summary: Get one order of a user
+      operationId: getOrder
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/OrderId"
+      responses:
+        "200":
+          description: The order.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Order" }
+              example: { id: 5, userId: 1, instrumentId: 45, side: BUY, type: LIMIT, quantity: 50, price: 710.00, status: NEW, datetime: "2023-07-12T12:11:22" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/v1/users/{userId}/orders/{orderId}/cancel:
+    post:
+      tags: [Orders]
+      summary: Cancel a pending order
+      description: Only NEW orders can be cancelled. Use the id of a NEW order, for example the one returned by the LIMIT buy.
+      operationId: cancelOrder
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/OrderId"
+      responses:
+        "200":
+          description: The order, now CANCELLED.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Order" }
+              example: { id: 5, userId: 1, instrumentId: 45, side: BUY, type: LIMIT, quantity: 50, price: 710.00, status: CANCELLED, datetime: "2023-07-12T12:11:22" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+components:
+  parameters:
+    UserId:
+      name: userId
+      in: path
+      required: true
+      description: Id of the user. There is no authentication.
+      schema: { type: integer }
+      example: 1
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema: { type: integer }
+      example: 5
+  responses:
+    InvalidRequest:
+      description: INVALID_REQUEST. The errors list names each invalid field.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example:
+            code: INVALID_REQUEST
+            message: Request validation failed.
+            errors: [{ field: q, message: Search text is required. }]
+    NotFound:
+      description: USER_NOT_FOUND, ORDER_NOT_FOUND, or INSTRUMENT_NOT_FOUND.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example: { code: USER_NOT_FOUND, message: User 99 was not found., errors: [] }
+    Conflict:
+      description: MARKET_PRICE_UNAVAILABLE, INCONSISTENT_POSITION, ORDER_NOT_CANCELLABLE, or ACCOUNT_BUSY (retry shortly).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example: { code: INCONSISTENT_POSITION, message: User 1 has an inconsistent position in instrument 31., errors: [] }
+    Unprocessable:
+      description: INSTRUMENT_NOT_TRADABLE, AMOUNT_TOO_SMALL, or SIZE_OUT_OF_RANGE.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example: { code: INSTRUMENT_NOT_TRADABLE, message: Instrument 66 is not tradable., errors: [] }
+  schemas:
+    OrderStatus:
+      type: string
+      enum: [NEW, FILLED, REJECTED, CANCELLED]
+    CreateOrderRequest:
+      type: object
+      required: [instrumentId, side, type]
+      properties:
+        instrumentId: { type: integer, example: 47 }
+        side: { type: string, enum: [BUY, SELL], example: BUY }
+        type: { type: string, enum: [MARKET, LIMIT], example: MARKET }
+        quantity: { type: integer, minimum: 1, description: Whole shares. Send exactly one of quantity or amount., example: 1 }
+        amount: { type: number, description: Pesos to invest. Buys or sells as many whole shares as the amount covers., example: 5000.00 }
+        price: { type: number, description: Required for LIMIT and ignored for MARKET. At most two decimals., example: 900.00 }
+    Order:
+      type: object
+      properties:
+        id: { type: integer }
+        userId: { type: integer }
+        instrumentId: { type: integer }
+        side: { type: string, enum: [BUY, SELL, CASH_IN, CASH_OUT] }
+        type: { type: string, enum: [MARKET, LIMIT] }
+        quantity: { type: integer }
+        price: { type: number }
+        status: { $ref: "#/components/schemas/OrderStatus" }
+        datetime: { type: string, format: date-time }
+    Portfolio:
+      type: object
+      properties:
+        availableCash: { type: number }
+        totalAccountValue: { type: number, nullable: true }
+        positions:
+          type: array
+          items: { $ref: "#/components/schemas/Position" }
+    Position:
+      type: object
+      properties:
+        instrumentId: { type: integer }
+        ticker: { type: string }
+        quantity: { type: integer, format: int64 }
+        marketValue: { type: number, nullable: true }
+        totalReturnPercentage: { type: number, nullable: true }
+        dailyReturnPercentage: { type: number, nullable: true }
+    Instrument:
+      type: object
+      properties:
+        id: { type: integer }
+        ticker: { type: string }
+        name: { type: string }
+        type: { type: string, enum: [ACCIONES, MONEDA] }
+    PageMetadata:
+      type: object
+      properties:
+        size: { type: integer }
+        number: { type: integer }
+        totalElements: { type: integer }
+        totalPages: { type: integer }
+    InstrumentPage:
+      type: object
+      properties:
+        content:
+          type: array
+          items: { $ref: "#/components/schemas/Instrument" }
+        page: { $ref: "#/components/schemas/PageMetadata" }
+    Error:
+      type: object
+      properties:
+        code: { type: string }
+        message: { type: string }
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              message: { type: string }
